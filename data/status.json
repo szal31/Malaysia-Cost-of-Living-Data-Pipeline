@@ -1,0 +1,29 @@
+{
+  "run_at": "2026-11-03T17:35:14Z",
+  "sources": {
+    "fuel": {
+      "status": "ok",
+      "detail": "",
+      "latest": "2026-10-29",
+      "age_days": 6,
+      "limit_days": 10,
+      "rows": 485
+    },
+    "fx": {
+      "status": "ok",
+      "detail": "",
+      "latest": "2026-11-03",
+      "age_days": 1,
+      "limit_days": 7,
+      "rows": 38209
+    },
+    "cpi": {
+      "status": "ok",
+      "detail": "",
+      "latest": "2026-09-01",
+      "age_days": 64,
+      "limit_days": 75,
+      "rows": 47838
+    }
+  }
+}
