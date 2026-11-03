@@ -1,0 +1,55 @@
+name: Daily pipeline
+
+on:
+  schedule:
+    - cron: "0 10 * * *"  # 18:00 Malaysia time, after Bank Negara publishes its 17:00 closing rates
+  workflow_dispatch:
+
+permissions:
+  contents: write  # to commit refreshed data
+
+concurrency:
+  group: daily-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Collect, check and publish
+        id: pipeline
+        # keep going on failure so the status file still gets committed; the last step fails the job
+        run: |
+          set +e
+          python run.py
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Commit refreshed data
+        run: |
+          if [ -n "$(git status --porcelain data/)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/
+            git commit -m "data: refresh $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Keep the other Streamlit apps awake
+        continue-on-error: true
+        run: python keepalive.py
+
+      - name: Fail if any source didn't update  # GitHub emails the owner
+        if: steps.pipeline.outputs.code != '0'
+        run: |
+          python -c "import json; [print(k, v['status'], v['detail']) for k, v in json.load(open('data/status.json'))['sources'].items()]"
+          exit 1
