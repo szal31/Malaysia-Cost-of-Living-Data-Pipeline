@@ -1,0 +1,12 @@
+# Run from the repo root: dbt build --project-dir dbt --profiles-dir dbt
+name: cost_of_living
+version: "1.0.0"
+profile: cost_of_living
+model-paths: ["models"]
+test-paths: ["tests"]
+models:
+  cost_of_living:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: external  # written as Parquet to data/marts/ for the web page

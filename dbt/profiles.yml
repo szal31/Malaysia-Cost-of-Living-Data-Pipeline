@@ -1,0 +1,8 @@
+cost_of_living:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: warehouse.duckdb  # rebuilt every run, not committed
+      external_root: data/marts
+      threads: 4

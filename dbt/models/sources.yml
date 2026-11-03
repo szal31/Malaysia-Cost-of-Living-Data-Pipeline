@@ -1,0 +1,10 @@
+version: 2
+sources:
+  - name: raw
+    tables:
+      - name: fuel
+        meta: {external_location: "read_csv('data/raw/fuel.csv')"}
+      - name: fx
+        meta: {external_location: "read_csv('data/raw/fx/*.csv')"}
+      - name: cpi
+        meta: {external_location: "read_csv('data/raw/cpi.csv')"}

@@ -1,0 +1,50 @@
+version: 2
+models:
+  - name: stg_fuel
+    data_tests:
+      - min_rows: {arguments: {n: 400}}  # an empty or truncated download fails here
+    columns:
+      - name: date
+        data_tests:
+          - unique
+          - not_null
+          - max_gap_days:
+              arguments: {days: 14}
+              config: {where: "date >= '2019-01-01'"}  # 2018 prices were frozen and set monthly
+      - name: ron95
+        data_tests:
+          - not_null
+          - in_range: {arguments: {min: 1.0, max: 6.0}}
+          - max_change_pct: {arguments: {pct: 75}}
+      - name: ron97
+        data_tests:
+          - in_range: {arguments: {min: 1.0, max: 8.0}}
+      - name: diesel
+        data_tests:
+          - not_null
+          - in_range: {arguments: {min: 1.0, max: 8.0}}
+          - max_change_pct: {arguments: {pct: 75}}  # diesel rose 56% in one week in June 2024, which was real
+  - name: stg_fx
+    data_tests:
+      - min_rows: {arguments: {n: 20000}}
+      - unique_together: {arguments: {columns: [currency, date]}}
+      - is_true: {arguments: {expression: "buying > 0 and buying <= selling"}}
+    columns:
+      - name: middle
+        data_tests:
+          - in_range:
+              arguments: {min: 3.0, max: 6.0}
+              config: {where: "currency = 'USD'"}
+          - max_change_pct:
+              arguments: {pct: 5, partition_by: currency}
+              # majors only: some currencies (EGP in March 2024) really did move 40% in a day
+              config: {where: "currency in ('USD', 'SGD', 'EUR', 'GBP', 'JPY', 'CNY', 'AUD', 'HKD')"}
+  - name: stg_cpi
+    data_tests:
+      - min_rows: {arguments: {n: 40000}}
+      - unique_together: {arguments: {columns: [state, date, division_code]}}
+    columns:
+      - name: cpi_index
+        data_tests:
+          - not_null
+          - in_range: {arguments: {min: 50, max: 300}}
