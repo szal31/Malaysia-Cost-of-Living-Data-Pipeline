@@ -9,6 +9,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -19,7 +20,7 @@ NAMES = {"fuel": "Fuel prices", "fx": "Exchange rates", "cpi": "Inflation (CPI)"
 COLOURS = {"ok": "green", "late": "orange", "failed": "red"}
 MYT = timezone(timedelta(hours=8))
 
-st.set_page_config(page_title="Malaysia Cost of Living", page_icon=":material/local_gas_station:")
+st.set_page_config(page_title="Malaysia Cost of Living", page_icon=":material/local_gas_station:", layout="wide")
 
 
 @st.cache_data(ttl=600)
@@ -35,6 +36,17 @@ def status():
 
 def day(d):
     return f"{d.day} {d:%b %Y}"
+
+
+def lines(wide, unit):
+    """Line chart with a readable year axis (st.line_chart labels long ranges by month name only)."""
+    long = wide.reset_index().melt("date", var_name="series", value_name="value").dropna()
+    st.altair_chart(alt.Chart(long).mark_line().encode(
+        x=alt.X("date:T", title=None, axis=alt.Axis(format="%Y", tickCount="year")),
+        y=alt.Y("value:Q", title=unit, scale=alt.Scale(zero=False)),
+        color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
+        tooltip=[alt.Tooltip("date:T", format="%d %b %Y"), "series:N", alt.Tooltip("value:Q", format=".4~f")]),
+        width="stretch")
 
 
 st.caption(":material/autorenew: Collected, checked and published every day by an automated pipeline")
@@ -76,9 +88,9 @@ c3.metric(f"Inflation · {c_now.date:%b %Y}", f"{c_now.inflation_yoy:.1f}%",
 tab_fuel, tab_fx, tab_cpi = st.tabs(["Fuel", "Ringgit", "Inflation"])
 with tab_fuel:
     st.markdown("**Pump prices, RM per litre** (Peninsular Malaysia)")
-    st.line_chart(fuel.set_index("date")[["ron95", "ron95_budi95", "ron97", "diesel"]].rename(
+    lines(fuel.set_index("date")[["ron95", "ron95_budi95", "ron97", "diesel"]].rename(
         columns={"ron95": "RON95 (market)", "ron95_budi95": "RON95 (BUDI95, targeted)", "ron97": "RON97",
-                 "diesel": "Diesel"}), y_label="RM per litre")
+                 "diesel": "Diesel"}), "RM per litre")
     st.caption("Prices were frozen in 2018 and set weekly from 2019. Diesel rose 56% in June 2024 when its "
                "subsidy was targeted; RON95 moved to targeted pricing (BUDI95) in 2025.")
 with tab_fx:
@@ -86,22 +98,21 @@ with tab_fx:
     picked = st.multiselect("Currencies", options, default=[c for c in ("USD", "SGD") if c in options])
     if picked:
         st.markdown("**Ringgit per one unit of each currency**")
-        st.line_chart(fx[fx.currency.isin(picked)].pivot(index="date", columns="currency", values="middle"),
-                      y_label="RM")
+        lines(fx[fx.currency.isin(picked)].pivot(index="date", columns="currency", values="middle"), "RM")
 with tab_cpi:
     latest = mart("cpi_latest")
     states = latest[latest.state != "Malaysia"].sort_values("inflation_yoy", ascending=False)
     st.markdown(f"**Inflation by state, {latest.date.max():%B %Y}** (year on year, %)")
-    st.bar_chart(states, x="state", y="inflation_yoy", horizontal=True, sort="-inflation_yoy", x_label="%", y_label="")
+    st.bar_chart(states, x="state", y="inflation_yoy", horizontal=True, sort="-inflation_yoy", x_label="", y_label="%")
     st.markdown("**National inflation since 2010** (year on year, %)")
-    st.line_chart(national.set_index("date")["inflation_yoy"], y_label="%")
+    lines(national.set_index("date")[["inflation_yoy"]].rename(columns={"inflation_yoy": "Malaysia"}), "%")
 
 st.subheader("Pipeline health")
 st.markdown("Every day the pipeline downloads each source, runs data checks in dbt, and only publishes data "
             "that passes. A source that fails keeps its last good data and emails the owner.")
 if run:
     for s, r in run["sources"].items():
-        age = f"{r['age_days']} days old" if r["age_days"] is not None else "no data"
+        age = "no data" if r["age_days"] is None else f"{r['age_days']} day{'s' * (r['age_days'] != 1)} old"
         st.markdown(f"**{NAMES[s]}** :{COLOURS[r['status']]}-badge[{r['status']}] · latest {r['latest']} · "
                     f"{age} (limit {r['limit_days']}) · {r['rows']:,} rows")
         if r["detail"]:
