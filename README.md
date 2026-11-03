@@ -39,11 +39,11 @@ Bank Negara publishes its closing rates.
 | Step | File | What it does |
 |---|---|---|
 | 1 | `ingest.py` | Downloads each source. Exchange rates are stored one CSV per month, so a daily update rewrites one small file instead of a growing one. |
-| 2 | `dbt/` | Staging models clean and type the raw files; data checks run on them; marts are written as Parquet for the page. |
+| 2 | `dbt/` | Staging models clean and type the raw files; data checks run on them; marts are written as Parquet for the page. Exchange rates are written one file per month, so the repo doesn't grow by a whole file every day. |
 | 3 | `run.py` | Handles each source on its own: backs up its files, downloads, runs its dbt models and checks, and puts the backup back if anything fails. Writes `data/status.json` every run. |
 | 4 | `.github/workflows/daily.yml` | Runs the pipeline, commits the data if it changed, and fails the job if any source didn't update, so GitHub emails me. |
 | 5 | `app.py` | The Streamlit page. It only reads the published files, so it is fast and can't show half-processed data. |
-| 6 | `keepalive.py` | Visits my other Streamlit apps every day so they don't go to sleep for lack of visitors. |
+| 6 | `keepalive.py` | Opens my other Streamlit apps in a headless browser every day, and wakes any that have gone to sleep. A plain web request doesn't count as a visit to Streamlit. |
 
 ## Data checks
 
@@ -52,9 +52,9 @@ The checks are dbt tests (`dbt/models/schema.yml`). A source is only published i
 | Source | Checks |
 |---|---|
 | Fuel | At least 400 weeks; dates unique; no gap over 14 days since 2019; RON95 between RM1 and RM6 and diesel between RM1 and RM8 a litre; no week-on-week jump over 75% |
-| Exchange rates | At least 20,000 rows; one rate per currency per day; buying above zero and below selling; USD between RM3 and RM6; no daily move over 5% for major currencies |
+| Exchange rates | At least 20,000 rows; one rate per currency per day; no gap over 10 days; buying above zero and below selling; USD between RM3 and RM6; no daily move over 5% for major currencies |
 | Inflation | At least 40,000 rows; one value per state, month and category; index between 50 and 300; all 17 regions (16 states plus Malaysia) reach the same latest month |
-| All | Freshness: fuel no older than 10 days, exchange rates 7 days, inflation 75 days |
+| All | Freshness: fuel no older than 10 days, exchange rates 7 days, inflation 100 days (DOSM publishes each month about 50 days after it starts) |
 
 Some limits come from real events found in the data, not guesses:
 - **The gap check starts in 2019,** because fuel prices were frozen in 2018 and set monthly.
@@ -72,7 +72,9 @@ jump), and the previous fuel data was put back.
   data. The other two still update.
 - **A source stops publishing.** For example, if DOSM publishes the CPI late, the source turns "late" once it
   passes its freshness limit.
-- **In both cases** the page shows a warning and the health section turns red or orange, and the GitHub job
+- **The whole job stops running.** The page works out each source's age when it opens, and warns if the
+  pipeline hasn't run for two days, so it can't keep showing "ok" forever.
+- **In every case** the page shows a warning and the health section turns red or orange, and the GitHub job
   fails, so I get an email.
 
 ## Run it
@@ -85,7 +87,7 @@ py -3.14 -m venv .venv
 pip install -r requirements.txt -r requirements-dev.txt
 python run.py           # collect, check and publish (the first run downloads all history, about 15 minutes)
 streamlit run app.py
-pytest                  # 19 tests; no network needed
+pytest                  # 24 tests; no network needed
 ```
 
 To run only the models and checks: `dbt build --project-dir dbt --profiles-dir dbt`.

@@ -20,10 +20,11 @@ import ingest
 
 ROOT = Path(__file__).parent
 DATA = ROOT / "data"
-SOURCES = {"fuel": 10, "fx": 7, "cpi": 75}  # how many days old the latest data may be
+# how many days old the latest data may be; CPI for month M is dated the 1st and published ~50 days later
+SOURCES = {"fuel": 10, "fx": 7, "cpi": 100}
 MART = {"fuel": "fuel_prices", "fx": "fx_rates", "cpi": "cpi"}
 FILES = {"fuel": ["raw/fuel.csv", "marts/fuel_prices.parquet"],
-         "fx": ["raw/fx", "marts/fx_rates.parquet"],
+         "fx": ["raw/fx", "marts/fx_rates"],  # one Parquet file per month
          "cpi": ["raw/cpi.csv", "marts/cpi.parquet", "marts/cpi_latest.parquet"]}
 MYT = timezone(timedelta(hours=8))
 
@@ -61,7 +62,8 @@ def _restore(source, folder):
 
 
 def _published(source):
-    path = DATA / "marts" / f"{MART[source]}.parquet"
+    path = DATA / "marts" / MART[source]
+    path = path if path.is_dir() else path.with_suffix(".parquet")
     if not path.exists():
         return None, 0
     d = pd.read_parquet(path, columns=["date"])

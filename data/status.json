@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-11-03T17:35:14Z",
+  "run_at": "2026-11-03T17:56:59Z",
   "sources": {
     "fuel": {
       "status": "ok",
@@ -22,7 +22,7 @@
       "detail": "",
       "latest": "2026-09-01",
       "age_days": 64,
-      "limit_days": 75,
+      "limit_days": 100,
       "rows": 47838
     }
   }

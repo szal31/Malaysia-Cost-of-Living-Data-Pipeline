@@ -24,7 +24,9 @@ def publish(data, source, day, text="A"):
     raw = data / "raw" / {"fuel": "fuel.csv", "cpi": "cpi.csv", "fx": "fx/2026-11.csv"}[source]
     raw.parent.mkdir(parents=True, exist_ok=True)
     raw.write_text(text)
-    pd.DataFrame({"date": pd.to_datetime([day])}).to_parquet(data / "marts" / f"{run.MART[source]}.parquet")
+    mart = data / "marts" / ("fx_rates/month=2026-11/data_0.parquet" if source == "fx" else f"{run.MART[source]}.parquet")
+    mart.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({"date": pd.to_datetime([day])}).to_parquet(mart)
 
 
 def fake(monkeypatch, data, fail=(), dbt_fail=(), days=FRESH):
@@ -60,10 +62,10 @@ def test_one_source_failing_does_not_block_others(data, monkeypatch):
 
 
 def test_late_source(data, monkeypatch):
-    fake(monkeypatch, data, days={**FRESH, "cpi": "2026-08-01"})  # 95 days old, limit 75
+    fake(monkeypatch, data, days={**FRESH, "cpi": "2026-07-01"})  # 126 days old, limit 100
     assert run.main(TODAY) == 1
     s = status(data)["cpi"]
-    assert s["status"] == "late" and s["age_days"] == 95
+    assert s["status"] == "late" and s["age_days"] == 126
 
 
 def test_first_run_without_files(data, monkeypatch):
@@ -84,3 +86,14 @@ def test_status_records_run_time(data, monkeypatch):
     fake(monkeypatch, data)
     run.main(TODAY)
     assert json.loads((data / "status.json").read_text())["run_at"].endswith("Z")
+
+
+def test_published_reads_partitioned_mart(data):
+    publish(data, "fx", "2026-11-03")  # exchange rates are one Parquet file per month
+    assert run._published("fx") == (date(2026, 11, 3), 1)
+
+
+def test_cpi_85_days_old_is_ok(data, monkeypatch):
+    # DOSM publishes month M about 50 days after the 1st of M, so the newest row is often 80+ days old
+    fake(monkeypatch, data, days={**FRESH, "cpi": "2026-08-11"})
+    assert run.main(TODAY) == 0

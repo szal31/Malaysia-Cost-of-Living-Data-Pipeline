@@ -45,8 +45,11 @@ jobs:
           fi
 
       - name: Keep the other Streamlit apps awake
-        continue-on-error: true
-        run: python keepalive.py
+        continue-on-error: true  # a sleeping app is reported, never a reason to fail the data job
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+          python keepalive.py
 
       - name: Fail if any source didn't update  # GitHub emails the owner
         if: steps.pipeline.outputs.code != '0'

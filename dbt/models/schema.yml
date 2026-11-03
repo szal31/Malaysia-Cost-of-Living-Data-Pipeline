@@ -30,6 +30,11 @@ models:
       - unique_together: {arguments: {columns: [currency, date]}}
       - is_true: {arguments: {expression: "buying > 0 and buying <= selling"}}
     columns:
+      - name: date
+        data_tests:
+          - max_gap_days:
+              arguments: {days: 10}  # long public holidays plus weekends, never more
+              config: {where: "currency = 'USD'"}
       - name: middle
         data_tests:
           - in_range:

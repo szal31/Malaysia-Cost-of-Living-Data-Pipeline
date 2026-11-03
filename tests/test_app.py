@@ -6,6 +6,12 @@ import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 
+def month_dir(marts):
+    folder = marts / "fx_rates" / "month=2026-11"  # exchange rates are one Parquet file per month
+    folder.mkdir(parents=True)
+    return folder / "data_0.parquet"
+
+
 @pytest.fixture
 def data(tmp_path, monkeypatch):
     st.cache_data.clear()
@@ -16,7 +22,7 @@ def data(tmp_path, monkeypatch):
                  ).to_parquet(marts / "fuel_prices.parquet")
     pd.DataFrame({"date": pd.to_datetime(["2026-11-02", "2026-11-03"] * 2), "currency": ["USD", "USD", "SGD", "SGD"],
                   "buying": [4.20, 4.21, 3.20, 3.21], "selling": [4.22, 4.23, 3.22, 3.23],
-                  "middle": [4.21, 4.22, 3.21, 3.22]}).to_parquet(marts / "fx_rates.parquet")
+                  "middle": [4.21, 4.22, 3.21, 3.22]}).to_parquet(month_dir(marts))
     pd.DataFrame({"state": ["Malaysia", "Malaysia", "Johor"], "date": pd.to_datetime(["2026-08-01", "2026-09-01"] * 1 + ["2026-09-01"]),
                   "division_code": ["overall"] * 3, "cpi_index": [134.0, 134.2, 140.1],
                   "inflation_yoy": [1.7, 1.8, 2.2], "inflation_mom": [0.1, 0.1, 0.2]}).to_parquet(marts / "cpi.parquet")
@@ -26,10 +32,13 @@ def data(tmp_path, monkeypatch):
     return tmp_path
 
 
-def write_status(data, fuel="ok"):
+def write_status(data, fuel="ok", run_at=None, fuel_latest="2026-10-29"):
+    from datetime import datetime, timezone
+    run_at = run_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     src = {"status": "ok", "detail": "", "latest": "2026-11-03", "age_days": 1, "limit_days": 7, "rows": 4}
-    (data / "status.json").write_text(json.dumps({"run_at": "2026-11-04T06:05:00Z", "sources": {
-        "fuel": {**src, "status": fuel, "detail": "checks failed" if fuel != "ok" else ""},
+    (data / "status.json").write_text(json.dumps({"run_at": run_at, "sources": {
+        "fuel": {**src, "status": fuel, "latest": fuel_latest, "limit_days": 10000,
+                 "detail": "checks failed" if fuel != "ok" else ""},
         "fx": src, "cpi": src}}))
 
 
@@ -60,3 +69,18 @@ def test_budi95_price_shown(data):
 def test_missing_status_file(data):
     at = app()
     assert any("status unknown" in c.value.lower() for c in at.caption)
+
+
+def test_stale_pipeline_warns(data):
+    write_status(data, run_at="2026-01-01T10:00:00Z")  # the job stopped running long ago
+    at = app()
+    assert at.warning and "hasn't run" in at.warning[0].value
+
+
+def test_age_is_worked_out_when_the_page_opens(data):
+    write_status(data, fuel_latest="2020-01-01")  # status said ok, but that was years ago
+    write = json.loads((data / "status.json").read_text())
+    write["sources"]["fuel"]["limit_days"] = 10
+    (data / "status.json").write_text(json.dumps(write))
+    at = app()
+    assert any("Fuel prices" in m.value and "late" in m.value for m in at.markdown)

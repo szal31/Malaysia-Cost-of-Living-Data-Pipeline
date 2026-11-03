@@ -6,7 +6,7 @@ Usage:  streamlit run app.py
 """
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import altair as alt
@@ -25,13 +25,26 @@ st.set_page_config(page_title="Malaysia Cost of Living", page_icon=":material/lo
 
 @st.cache_data(ttl=600)
 def mart(name):
-    return pd.read_parquet(DATA / "marts" / f"{name}.parquet")
+    path = DATA / "marts" / name  # exchange rates are a folder of monthly files
+    df = pd.read_parquet(path if path.is_dir() else path.with_suffix(".parquet"))
+    return df.drop(columns="month", errors="ignore")
 
 
 @st.cache_data(ttl=600)
 def status():
+    """The last run's status, with each source's age worked out again for today, so a pipeline that has
+    stopped running can't keep showing "ok"."""
     path = DATA / "status.json"
-    return json.loads(path.read_text()) if path.exists() else None
+    if not path.exists():
+        return None
+    run = json.loads(path.read_text())
+    today = datetime.now(MYT).date()
+    for r in run["sources"].values():
+        if r["latest"]:
+            r["age_days"] = (today - date.fromisoformat(r["latest"])).days
+            if r["status"] == "ok" and r["age_days"] > r["limit_days"]:
+                r["status"] = "late"
+    return run
 
 
 def day(d):
@@ -57,9 +70,12 @@ run = status()
 if run:
     at = datetime.strptime(run["run_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).astimezone(MYT)
     st.caption(f"Last pipeline run: {day(at)}, {at:%H:%M} Malaysia time · [Run history ↗]({REPO}/actions)")
+    if datetime.now(MYT) - at > timedelta(days=2):  # it runs daily, so this means the job has stopped
+        st.warning(f"The pipeline hasn't run since {day(at)}, so these numbers may be out of date.",
+                   icon=":material/warning:")
     behind = [NAMES[s] for s, r in run["sources"].items() if r["status"] != "ok"]
     if behind:
-        st.warning(f"{', '.join(behind)} didn't update in the last run, so the latest available numbers are shown. "
+        st.warning(f"{', '.join(behind)} isn't up to date, so the latest available numbers are shown. "
                    "See Pipeline health below.", icon=":material/warning:")
 else:
     st.caption("Pipeline status unknown: no run has been recorded yet.")
