@@ -1,7 +1,4 @@
-dbt-core==1.12.6
-dbt-duckdb==1.11.1
-duckdb==2.0.0
+# The Streamlit page only (Streamlit Cloud installs this file); the daily job uses requirements-pipeline.txt
 pandas==3.1.0
 pyarrow==26.0.1
-requests==2.34.2
 streamlit==1.66.1

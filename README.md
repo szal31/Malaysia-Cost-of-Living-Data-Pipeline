@@ -84,7 +84,7 @@ Uses Python 3.14.
 ```bash
 py -3.14 -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt -r requirements-dev.txt
+pip install -r requirements-pipeline.txt -r requirements-dev.txt
 python run.py           # collect, check and publish (the first run downloads all history, about 15 minutes)
 streamlit run app.py
 pytest                  # 24 tests; no network needed
