@@ -63,7 +63,7 @@ def test_fx_parses_month_history(monkeypatch):
     body = {"data": {"currency_code": "JPY", "unit": 100, "rate": [
         {"date": "2026-10-01", "buying_rate": 2.5595, "selling_rate": 2.6045, "middle_rate": None}]}}
     monkeypatch.setattr(ingest, "CURRENCIES", ["JPY"])
-    monkeypatch.setattr(ingest.requests, "get", lambda url, **kw: Resp(body))
+    monkeypatch.setattr(ingest.HTTP, "get", lambda url, **kw: Resp(body))
     df = ingest.fetch_fx(["2026-10"])
     assert df.to_dict("records") == [{"currency": "JPY", "unit": 100, "date": "2026-10-01",
                                       "buying": 2.5595, "selling": 2.6045}]
@@ -94,6 +94,11 @@ def test_http_error_becomes_source_error(monkeypatch):
 
     def boom(url, **kw):
         raise requests.ConnectionError("down")
-    monkeypatch.setattr(ingest.requests, "get", boom)
+    monkeypatch.setattr(ingest.HTTP, "get", boom)
     with pytest.raises(ingest.SourceError):
         ingest.fx_latest()
+
+
+def test_bnm_requests_retry_temporary_errors():
+    retry = ingest.HTTP.get_adapter("https://api.bnm.gov.my").max_retries
+    assert retry.total >= 3 and 503 in retry.status_forcelist and retry.backoff_factor > 0

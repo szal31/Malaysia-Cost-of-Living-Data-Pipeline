@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 ROOT = Path(__file__).parent
 RAW = ROOT / "data" / "raw"
@@ -24,6 +26,10 @@ CURRENCIES = ["AED", "AUD", "BND", "CAD", "CHF", "CNY", "EGP", "EUR", "GBP", "HK
               "KRW", "MMK", "NPR", "NZD", "PHP", "PKR", "SAR", "SDR", "SGD", "THB", "TWD", "USD", "VND"]
 FUEL_COLUMNS = ["date", "ron95", "ron97", "diesel"]
 CPI_COLUMNS = ["state", "date", "division_code", "cpi_index", "inflation_yoy", "inflation_mom"]
+# BNM sometimes answers one of the ~55 daily requests with a 503; retry rather than fail the whole source
+HTTP = requests.Session()
+HTTP.mount("https://", HTTPAdapter(max_retries=Retry(total=4, backoff_factor=2,
+                                                     status_forcelist=[429, 500, 502, 503, 504])))
 
 
 class SourceError(Exception):
@@ -71,7 +77,7 @@ def fetch_cpi():
 
 def _bnm(path):
     try:
-        r = requests.get(f"{BNM}{path}", headers=BNM_HEADERS, params=SESSION, timeout=60)
+        r = HTTP.get(f"{BNM}{path}", headers=BNM_HEADERS, params=SESSION, timeout=60)
         if r.status_code == 404:  # BNM answers "No records found" this way
             return []
         r.raise_for_status()
