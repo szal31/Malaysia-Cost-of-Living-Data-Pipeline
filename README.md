@@ -4,7 +4,7 @@ A data pipeline that runs itself. Every day it collects Malaysia's **fuel prices
 rates** and **inflation by state**, checks the data, models it in SQL with dbt, and publishes it to a web page.
 Nobody touches it: the dates on the page move forward on their own.
 
-**Live page:** _coming soon_  
+**Live page:** https://malaysia-cost-of-living-data-pipeline.streamlit.app/  
 **Run history:** [GitHub Actions](https://github.com/szal31/Malaysia-Cost-of-Living-Data-Pipeline/actions)
 
 ## What it shows
@@ -87,7 +87,7 @@ py -3.14 -m venv .venv
 pip install -r requirements-pipeline.txt -r requirements-dev.txt
 python run.py           # collect, check and publish (the first run downloads all history, about 15 minutes)
 streamlit run app.py
-pytest                  # 24 tests; no network needed
+pytest                  # 25 tests; no network needed
 ```
 
 To run only the models and checks: `dbt build --project-dir dbt --profiles-dir dbt`.
