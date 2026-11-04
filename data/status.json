@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-11-04T02:17:59Z",
+  "run_at": "2026-11-04T06:19:06Z",
   "sources": {
     "fuel": {
       "status": "ok",
@@ -10,8 +10,8 @@
       "rows": 485
     },
     "fx": {
-      "status": "ok",
-      "detail": "",
+      "status": "failed",
+      "detail": "SourceError: BNM /AED/year/2026/month/10: 503 Server Error: Service Unavailable for url: https://api.bnm.gov.my/public/exchange-rate/AED/year/2026/month/10?session=1700",
       "latest": "2026-11-03",
       "age_days": 1,
       "limit_days": 7,
