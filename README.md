@@ -33,7 +33,7 @@ flowchart LR
     J -- any source not ok --> E[GitHub emails<br>the owner]
 ```
 
-A GitHub Actions job (`.github/workflows/daily.yml`) runs `run.py` at 6pm Malaysia time every day, after
+A GitHub Actions job (`.github/workflows/daily.yml`) runs `run.py` at about 6:15pm Malaysia time every day, after
 Bank Negara publishes its closing rates.
 
 | Step | File | What it does |

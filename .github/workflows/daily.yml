@@ -2,7 +2,7 @@ name: Daily pipeline
 
 on:
   schedule:
-    - cron: "0 10 * * *"  # 18:00 Malaysia time, after Bank Negara publishes its 17:00 closing rates
+    - cron: "17 10 * * *"  # 18:17 Malaysia time, after the 17:00 closing rates; on-the-hour schedules get dropped more
   workflow_dispatch:
 
 permissions:
