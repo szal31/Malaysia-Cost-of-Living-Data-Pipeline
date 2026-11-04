@@ -87,20 +87,26 @@ f_now, f_prev = fuel.iloc[-1], fuel.iloc[-2]
 u_now, u_prev = usd.iloc[-1], usd.iloc[-2]
 c_now, c_prev = national.iloc[-1], national.iloc[-2]
 
+st.subheader("Latest numbers", divider="gray")
 c1, c2, c3 = st.columns(3)
 budi = f_now.get("ron95_budi95")
 c1.metric(f"RON95 market price · {day(f_now.date)}", f"RM{f_now.ron95:.2f}/litre",
-          f"{f_now.ron95 - f_prev.ron95:+.2f} on last week", delta_color="inverse",
-          help="The unsubsidised pump price, set weekly.")
+          f"{f_now.ron95 - f_prev.ron95:+.2f} on last week", delta_color="inverse", border=True,
+          chart_data=fuel.ron95.tail(52), chart_type="line", help="The unsubsidised pump price, set weekly. "
+          "The small chart shows the last 12 months.")
 if pd.notna(budi):  # since 2025 most Malaysians pay the targeted price, so show it beside the market one
     c1.caption(f"Eligible Malaysians pay **RM{budi:.2f}/litre** under BUDI95.")
 c2.metric(f"Ringgit per US dollar · {day(u_now.date)}", f"RM{u_now.middle:.4f}",
-          f"{u_now.middle - u_prev.middle:+.4f} on previous day", delta_color="inverse",
-          help="Bank Negara's 17:00 closing rate, midpoint of buying and selling. Lower means a stronger ringgit.")
+          f"{u_now.middle - u_prev.middle:+.4f} on previous day", delta_color="inverse", border=True,
+          chart_data=usd.middle.tail(90), chart_type="line",
+          help="Bank Negara's 17:00 closing rate, midpoint of buying and selling. Lower means a stronger ringgit. "
+          "The small chart shows the last 90 working days.")
 c3.metric(f"Inflation · {c_now.date:%b %Y}", f"{c_now.inflation_yoy:.1f}%",
           f"{c_now.inflation_yoy - c_prev.inflation_yoy:+.1f} pts on previous month", delta_color="inverse",
-          help="Year-on-year change in Malaysia's consumer price index.")
+          border=True, chart_data=national.inflation_yoy.tail(24), chart_type="line",
+          help="Year-on-year change in Malaysia's consumer price index. The small chart shows the last 2 years.")
 
+st.subheader("Trends", divider="gray")
 tab_fuel, tab_fx, tab_cpi = st.tabs(["Fuel", "Ringgit", "Inflation"])
 with tab_fuel:
     st.markdown("**Pump prices, RM per litre** (Peninsular Malaysia)")
@@ -123,16 +129,21 @@ with tab_cpi:
     st.markdown("**National inflation since 2010** (year on year, %)")
     lines(national.set_index("date")[["inflation_yoy"]].rename(columns={"inflation_yoy": "Malaysia"}), "%")
 
-st.subheader("Pipeline health")
+st.subheader("Pipeline health", divider="gray")
 st.markdown("Every day the pipeline downloads each source, runs data checks in dbt, and only publishes data "
             "that passes. A source that fails keeps its last good data and emails the owner.")
 if run:
-    for s, r in run["sources"].items():
-        age = "no data" if r["age_days"] is None else f"{r['age_days']} day{'s' * (r['age_days'] != 1)} old"
-        st.markdown(f"**{NAMES[s]}** :{COLOURS[r['status']]}-badge[{r['status']}] · latest {r['latest']} · "
-                    f"{age} (limit {r['limit_days']}) · {r['rows']:,} rows")
+    for col, (s, r) in zip(st.columns(len(run["sources"])), run["sources"].items()):
+        box = col.container(border=True)
+        box.markdown(f"**{NAMES[s]}** :{COLOURS[r['status']]}-badge[{r['status']}]")
+        if r["latest"]:
+            age = f"{r['age_days']} day{'s' * (r['age_days'] != 1)} old"
+            box.caption(f"Latest data {day(date.fromisoformat(r['latest']))} · {age} (limit {r['limit_days']})  \n"
+                        f"{r['rows']:,} rows published")
+        else:
+            box.caption("No data published yet")
         if r["detail"]:
-            st.caption(r["detail"])
+            box.caption(r["detail"])
 else:
     st.caption("Pipeline status unknown.")
 
