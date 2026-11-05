@@ -1,27 +1,27 @@
 {
-  "run_at": "2026-11-04T08:18:00Z",
+  "run_at": "2026-11-05T18:01:25Z",
   "sources": {
     "fuel": {
       "status": "ok",
       "detail": "",
-      "latest": "2026-10-29",
-      "age_days": 6,
+      "latest": "2026-11-05",
+      "age_days": 1,
       "limit_days": 10,
-      "rows": 485
+      "rows": 486
     },
     "fx": {
       "status": "ok",
       "detail": "",
-      "latest": "2026-11-03",
+      "latest": "2026-11-05",
       "age_days": 1,
       "limit_days": 7,
-      "rows": 38209
+      "rows": 38261
     },
     "cpi": {
       "status": "ok",
       "detail": "",
       "latest": "2026-09-01",
-      "age_days": 64,
+      "age_days": 66,
       "limit_days": 100,
       "rows": 47838
     }
