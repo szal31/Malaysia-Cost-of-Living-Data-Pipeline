@@ -1,11 +1,11 @@
 {
-  "run_at": "2026-11-08T16:41:22Z",
+  "run_at": "2026-11-09T20:43:37Z",
   "sources": {
     "fuel": {
       "status": "ok",
       "detail": "",
       "latest": "2026-11-05",
-      "age_days": 4,
+      "age_days": 5,
       "limit_days": 10,
       "rows": 486
     },
@@ -13,7 +13,7 @@
       "status": "ok",
       "detail": "",
       "latest": "2026-11-06",
-      "age_days": 3,
+      "age_days": 4,
       "limit_days": 7,
       "rows": 38287
     },
@@ -21,7 +21,7 @@
       "status": "ok",
       "detail": "",
       "latest": "2026-09-01",
-      "age_days": 69,
+      "age_days": 70,
       "limit_days": 100,
       "rows": 47838
     }
